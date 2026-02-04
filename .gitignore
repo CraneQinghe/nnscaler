@@ -44,3 +44,7 @@ shelf
 .rendered.*.cpp
 .nnscaler/
 .zip
+
+running.conf
+running.sh
+togther_profile.sh
