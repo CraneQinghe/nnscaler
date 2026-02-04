@@ -788,9 +788,9 @@ def calc_optimal_pp_plan_max_sum_dpsum(
             j_plus_1 = prev_idx[3]
             tp_idx = (tp, s, i, j_plus_1 - 1, dp_group_mesh)
         spmd_outs.append(tp_info[tp_idx])
-        logging.info(
-            f'stage weight_update_time:{micro_batch_num * tp_info[tp_idx].weight_update_time},',
-            f'dp_size:{tp_info[tp_idx].dp_size/1024}GB')
+        # logging.info(
+        #     f'stage weight_update_time:{micro_batch_num * tp_info[tp_idx].weight_update_time},',
+        #     f'dp_size:{tp_info[tp_idx].dp_size/1024}GB')
         tp_list.append(tp)
         if prev_idx != None:
             build_answer(*prev_idx, dp_group_mesh, _3)

@@ -1,12 +1,12 @@
 #!/bin/bash
-pushd /data/haiqwa/zevin_nfs/andy/Auto-Parallelization/nnscaler_group1/nnscaler-h3c
+pushd /nfs/andy/code/nnscaler-M
 export NNSCALER_HOME=$(pwd)
 export PYTHONPATH=${NNSCALER_HOME}:$PYTHONPATH
 popd
 
 DTIME=`date +%m-%d`
 MTIME=`date +%H-%M`
-export PROFILE_OUTPUT=/data/haiqwa/zevin_nfs/andy/Auto-Parallelization/nnscaler_group1/nnscaler-h3c/examples/logs/${DTIME}
+export PROFILE_OUTPUT=/nfs/andy/code/nnscaler-M/examples/logs/${DTIME}
 export date_str=$DTIME
 export time_str=$MTIME
 mkdir -p ${PROFILE_OUTPUT}
@@ -23,7 +23,7 @@ for PLAN_NGPUS in 4;do
             torchrun --nnodes=${NNODES} --nproc_per_node=${NPROC_PER_NODE} ${CODE} --run_mode compile --plan_ngpus ${PLAN_NGPUS} --runtime_ngpus ${RUNTIME_NGPUS} --name ${NAME}_${PLAN_NGPUS} --model_id ${MODEL_ID} --dataset_path ${DATASET_PATH} 2>&1 | tee ${LOG_NAME}
         fi
     elif [ $# -eq 2 ]; then
-        MASTER_ADDR=172.20.$1.2
+        MASTER_ADDR=192.168.1.10$1
         NODE_RANK=$2
         export LOG_NAME=${PROFILE_OUTPUT}/${MTIME}.dp_size_$((${RUNTIME_NGPUS} / ${PLAN_NGPUS}))_${NAME}_${PLAN_NGPUS}_node_rank${NODE_RANK}.log
         if [ "$PIPLINE" == "True" ]; then

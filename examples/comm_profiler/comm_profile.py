@@ -30,23 +30,25 @@ class CommProfiler:
 
         b_size = 16
         sequence_len = 16
-        element_size=4
-        sizes_in_mb=[0.25,0.5,1,2,4,8,16,32,64,128,256,512,1024,2048]
+        element_size = 4
+        sizes_in_mb = [0.25, 0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]
         
         model_dim_list = [
-            int(mem * 1024 * 1024 //element_size // b_size // sequence_len)
+            int(mem * 1024 * 1024 // element_size // b_size // sequence_len)
             for mem in sizes_in_mb
         ]
         times_in_s = []
-
 
         for cur_sz, d_size in zip(sizes_in_mb, model_dim_list):
             assert d_size % self.nranks == 0
             if primitive in ['all gather', 'all to all']:
                 d_size = d_size // self.nranks
+            
             tensor = torch.rand([b_size, sequence_len, d_size],
                                 dtype=torch.float32,
                                 device=torch.cuda.current_device())
+            
+            # 原语映射逻辑保持不变
             if primitive == 'all gather':
                 func = all_gather
                 kwargs = {'tensor': tensor, 'dim': 2, 'ranks': self.ranks}
@@ -58,38 +60,39 @@ class CommProfiler:
                 kwargs = {'tensor': tensor, 'dim': 2, 'ranks': self.ranks}
             elif primitive == 'all to all':
                 func = all_to_all
-                kwargs = {
-                    'tensor': tensor,
-                    'idim': 0,
-                    'odim': 2,
-                    'ranks': self.ranks
-                }
+                kwargs = {'tensor': tensor, 'idim': 0, 'odim': 2, 'ranks': self.ranks}
             elif primitive == 'move':
                 func = move
                 kwargs = {
-                    'tensor': tensor,
-                    'shape': tensor.shape,
-                    'dtype': tensor.dtype,
-                    'src': 0,
-                    'dst': 1
+                    'tensor': tensor, 'shape': tensor.shape, 'dtype': tensor.dtype,
+                    'src': 0, 'dst': 1
                 }
             else:
                 raise ValueError('Unknown primitive: {}'.format(primitive))
             
-            if primitive == 'move' and (torch.distributed.get_rank() != 0 and torch.distributed.get_rank()!=1):
+            if primitive == 'move' and (torch.distributed.get_rank() != 0 and torch.distributed.get_rank() != 1):
                 return sizes_in_mb, times_in_s
             else:
-                if torch.distributed.get_rank() == 0: print(f'{d_size}_1')
+                if torch.distributed.get_rank() == 0: print(f'Profiling {primitive} (Size: {cur_sz} MB)...')
+                
+                # 热身阶段
                 for _ in range(self.warmup_times):
-                    # if torch.distributed.get_rank() == 0: print(f'{_}')
                     func(**kwargs)
+                
+                # 清理计时器，准备正式统计
                 CudaTimer().clear()
-                # if torch.distributed.get_rank() == 0: print(f'{d_size}_2')
+                
+                # 正式 Profile 阶段
                 for _ in range(self.profile_times):
                     otensor = func(**kwargs)
-                # if torch.distributed.get_rank() == 0: print(f'{d_size}_3')
-                cur_t = CudaTimer().instance.field_data['comm'] / self.profile_times
+                
+                # 关键修复：
+                # 1. 使用 timer_key (如 'all_reduce') 替换 'comm'
+                # 2. 使用 .get(key, 0) 安全获取，防止 move 等原语若未计时导致崩溃
+                timer_key = primitive.replace(' ', '_')
+                cur_t = CudaTimer().instance.field_data[timer_key] / self.profile_times
                 times_in_s.append(cur_t)
+                
         return sizes_in_mb, times_in_s
 
     def collect_internode_profile_info(self,
@@ -157,7 +160,8 @@ class CommProfiler:
                 for _ in range(self.profile_times):
                     otensor = func(**kwargs)
                 # if torch.distributed.get_rank() == 0: print(f'{d_size}_3')
-                cur_t = CudaTimer().instance.field_data['comm'] / self.profile_times
+                timer_key = primitive.replace(' ', '_')
+                cur_t = CudaTimer().instance.field_data[timer_key] / self.profile_times
                 times_in_s.append(cur_t)
         return sizes_in_mb, times_in_s
 
