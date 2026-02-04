@@ -792,12 +792,12 @@ class Trainer:
                 disable=not self.train_args.enable_progress_bar,
             )
         comm_counter1=Comm_counter()
-        prof=torch.profiler.profile(
-                schedule=torch.profiler.schedule(wait=1, warmup=1, active=4, repeat=0),
-                on_trace_ready=torch.profiler.tensorboard_trace_handler(f"/data/haiqwa/zevin_nfs/andy/Auto-Parallelization/nnscaler_group1/nnscaler-0.5/examples/logs/tensorbroad/{comm_counter1.date_str}/{comm_counter1.time_str}",torch.distributed.get_rank()),
-                record_shapes=True,
-                profile_memory=True,
-                with_stack=True)
+        # prof=torch.profiler.profile(
+        #         schedule=torch.profiler.schedule(wait=1, warmup=1, active=4, repeat=0),
+        #         on_trace_ready=torch.profiler.tensorboard_trace_handler(f"/data/haiqwa/zevin_nfs/andy/Auto-Parallelization/nnscaler_group1/nnscaler-0.5/examples/logs/tensorbroad/{comm_counter1.date_str}/{comm_counter1.time_str}",torch.distributed.get_rank()),
+        #         record_shapes=True,
+        #         profile_memory=True,
+        #         with_stack=True)
         #qinghe 
         from nnscaler.utils import accum_Manager
         accum_manager=accum_Manager()
@@ -811,10 +811,10 @@ class Trainer:
             has_validated = VAL_STATUS_NO
             num_batches = len(batches)
             batches, is_dummy_batch = self._fix_batches(batches)
-            if i == 20:
-                prof.start()
-            if i > 20 and i<27:
-                prof.step()
+            # if i == 20:
+            #     prof.start()
+            # if i > 20 and i<27:
+            #     prof.step()
             accum_manager.reset()
             self.model.train()                   
             self.hook.before_zero_grad(self)
